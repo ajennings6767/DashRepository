@@ -8,7 +8,9 @@ import plotly.graph_objs as go
 import dash_table_experiments as dt
 import plotly.plotly as plt
 
-md ='''
+app = dash.Dash()
+
+md = '''
 ## Dash and Markdown
 
 Dash apps can be written in Markdown.
@@ -32,6 +34,7 @@ engine = create_engine(r'sqlite:///H:\BOND_TRA\ATJ\Projects\Data\database.db')
 # Read sql table into a dataframe
 secMaster = pd.read_sql_table('secMaster', con=engine)
 table = pd.read_sql_table('GACGB1', con=engine)
+
 
 def generate_table(dataframe, max_rows=10000):
     '''
@@ -58,6 +61,7 @@ veto = [
     'Tenor_Unit'
 ]
 
+
 def generate_dropdown_dict(series):
     list = []
     for x in series:
@@ -65,6 +69,7 @@ def generate_dropdown_dict(series):
         list.append(d)
     print(list[0:5])
     return list
+
 
 '''
 So everything we want to show goes into the once html.Div(children=[])
