@@ -8,6 +8,8 @@ import plotly.graph_objs as go
 import dash_table_experiments as dt
 import plotly.plotly as plt
 
+app = dash.Dash()
+
 md ='''
 ## Dash and Markdown
 
