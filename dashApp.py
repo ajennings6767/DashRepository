@@ -14,10 +14,6 @@ md = '''
 ## Dash and Markdown
 
 Dash apps can be written in Markdown.
-Dash uses the [CommonMark](http://commonmark.org/)
-specification of Markdown.
-Check out their [60 Second Markdown Tutorial](http://commonmark.org/help/)
-if this is your first introduction to Markdown!
 
 *Italic*
 **Bold**
@@ -30,6 +26,7 @@ Horizontal Rule
 '''
 # # Create sqlalchemy engine to connect to the database
 engine = create_engine(r'sqlite:///H:\BOND_TRA\ATJ\Projects\Data\database.db')
+CIXSengine = create_engine(r'sqlite:///H:\BOND_TRA\ATJ\Projects\Data\CIXS.db')
 
 # Read sql table into a dataframe
 secMaster = pd.read_sql_table('secMaster', con=engine)
@@ -52,6 +49,11 @@ def generate_table(dataframe, max_rows=10000):
             html.Td(dataframe.iloc[i][col]) for col in dataframe.columns
         ]) for i in range(min(len(dataframe), max_rows))]
     )
+
+
+def generate_CIXS_df(tableName):
+    df = pd.read_sql_table(tableName, con=engine)
+    return df
 
 
 veto = [
@@ -107,56 +109,106 @@ app.layout = html.Div([
         value='GACGB1',
         options = [{'label': secID, 'value': secID} for secID in secMaster['SecID']]
     ),
+    dcc.RadioItems(
+        options = [
+            {'label': '1 Month', 'value': '1'},
+            {'label': '3 Month', 'value': '3'},
+            {'label': '6 Month', 'value': '6'},
+            {'label': '1 Year', 'value': '12'},
+            {'label': '3 Year', 'value': '36'},
+            {'label': '5 Year', 'value': '60'},
+            {'label': 'Max', 'value': 'Max'}
+        ],
+        value = 'Max',
+        labelStyle = {'display': 'inline-block'}
+    ),
     html.Div([
         html.Div([
-            html.H3('Column 1'),
-            dcc.Graph(
-                id = 'testGraph',
-                figure = go.Figure(
-                    data=[
-                        go.Scatter(
-                            x=table.date,
-                            y=table['PX_LAST'],
-                            name='ACGB2',
-                            line=dict(color='#17BECF'),
-                            opacity=.8
-                        )
-                    ],
-                    layout=go.Layout(
-                        title='Test',
-                        showlegend=True,
-                        legend=go.Legend(x=0, y=1.0),
-                        margin = go.Margin(
-                            l=40,
-                            r=0,
-                            t=40,
-                            b=30
-                        )
-                    )
-                )
-            )
-        ], className="six columns"),
-        html.Div([
-            html.H3('Column 2'),
+            html.H3('Historical Yield'),
             dcc.Graph(id = 'graph2')
-        ], className="six columns"),
+        ], className="eight columns"),
+        html.Div([
+            html.H3('Yield Distribution'),
+            dcc.Graph(id = 'testGraph')
+        ], className="four columns"),
+    ], className="row"),
+
+    html.Div([
+        html.Div([
+            html.H3('Historical Spread'),
+            dcc.Graph(id='graph3')
+        ], className="twelve columns"),
     ], className="row")
 ])
 
 @app.callback(Output('graph2', 'figure'), [Input('drop', 'value')])
 def generate_graph(secList):
     print(secList)
+    traces = []
+    for i in (secList):
+        df = generate_CIXS_df(i)
+        traces.append(go.Scatter(
+            x = df.date,
+            y = df.PX_LAST,
+            name = i
+        ))
     return {
-        'data' : go.Scatter(
-                    x=table.date,
-                    y=table['PX_LAST'],
-                    name='ACGB2',
-                    line=dict(color='#17BECF'),
-                    opacity=.8
-                    ),
+        'data' : traces,
         'layout' : go.Layout(
                     title='Test',
                     showlegend=True,
+                    legend=go.Legend(x=0, y=1.0),
+                    margin=go.Margin(
+                        l=40,
+                        r=0,
+                        t=40,
+                        b=30
+                    ))
+    }
+
+@app.callback(Output('graph3', 'figure'), [Input('drop', 'value')])
+def generate_graph(secList):
+    print(secList)
+    traces = []
+    for i in (secList):
+        df = generate_CIXS_df(i)
+        traces.append(go.Scatter(
+            x = df.date,
+            y = df.PX_LAST,
+            name = i
+        ))
+    return {
+        'data' : traces,
+        'layout' : go.Layout(
+                    title='Test',
+                    showlegend=True,
+                    legend=go.Legend(x=0, y=1.0),
+                    margin=go.Margin(
+                        l=40,
+                        r=0,
+                        t=40,
+                        b=30
+                    ))
+    }
+
+@app.callback(Output('testGraph', 'figure'), [Input('drop', 'value')])
+def generate_graph(secList):
+    print(secList)
+    traces = []
+    for i in secList:
+        df = generate_CIXS_df(i)
+        traces.append(go.Histogram(
+            y = df.PX_LAST,
+            histnorm = 'probability',
+            opacity = .65,
+            name = i
+        ))
+    return {
+        'data' : traces,
+        'layout' : go.Layout(
+                    title='Test',
+                    showlegend=True,
+                    barmode = "overlay",
                     legend=go.Legend(x=0, y=1.0),
                     margin=go.Margin(
                         l=40,
