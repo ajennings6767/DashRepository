@@ -477,7 +477,6 @@ class CIXSManager(DBManager):
         6. Insert new data into table
         7. Clean up data duplicates
         '''
-        exit()
         # Get list of all active CIXS
         self.cur.execute("SELECT CIXS_ID FROM cixsMaster WHERE ACTIVE = 'Y'")
         tupleList = self.cur.fetchall()
@@ -500,6 +499,7 @@ class CIXSManager(DBManager):
 
             # Iterate though each field in the CIXS table (i.e. Spreads, zScore_7, zScore_30, etc.)
             for f in fieldList:
+                print(f)
                 if f == "Spread":
                     # Find the most recent date on the table where the field is not null
                     # The field can only be null if we have multiple fields
@@ -520,6 +520,11 @@ class CIXSManager(DBManager):
                     '''
                     call zScore calc function and pass the spreads and days as an arg
                     '''
+                    print("zscore")
+                    days = f.split('_')[1]
+                    print('days')
+                    df = pd.read_sql_table(table, con=self.SecEngine, parse_dates={'date': {'format': '%Y%m%d'}})
+                    self.CIXS_Calc_zScore(df, days)
                 else:
                     print('else')
         pass
