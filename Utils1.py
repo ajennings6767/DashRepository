@@ -104,7 +104,7 @@ class CIXS(object):
 
 class DBManager(object):
 
-    db = "H:\BOND_TRA\ATJ\Projects\Data\database.db"
+    db = "H:\BOND_TRA\ATJ\Projects\Monitors\CIXS\DashRepository\database.db"
 
     def __init__(self):
         '''
@@ -346,7 +346,7 @@ class DBManager(object):
 
 class CIXSManager(DBManager):
 
-    CIXS_db = "H:\BOND_TRA\ATJ\Projects\Data\CIXS.db"
+    CIXS_db = "H:\BOND_TRA\ATJ\Projects\Monitors\CIXS\DashRepository\CIXS.db"
 
     def __init__(self):
         self.conn = sqlite3.connect(self.CIXS_db)
@@ -355,8 +355,8 @@ class CIXSManager(DBManager):
         # self.ShortList = self.getShortList()
         # self.FullList = self.getFullList()
 
-        self.SecEngine = create_engine(r'sqlite:///H:\BOND_TRA\ATJ\Projects\Data\database.db')
-        self.CIXSEngine = create_engine(r'sqlite:///H:\BOND_TRA\ATJ\Projects\Data\CIXS.db')
+        self.SecEngine = create_engine(r'sqlite:///H:\BOND_TRA\ATJ\Projects\Monitors\CIXS\DashRepository\database.db')
+        self.CIXSEngine = create_engine(r'sqlite:///H:\BOND_TRA\ATJ\Projects\Monitors\CIXS\DashRepository\CIXS.db')
 
     def does_CIXS_Master_Exist(self):
         '''
@@ -499,6 +499,7 @@ class CIXSManager(DBManager):
 
             # Iterate though each field in the CIXS table (i.e. Spreads, zScore_7, zScore_30, etc.)
             for f in fieldList:
+                # TODO find the best way to manage the fields that require updating and those that are just byproducts of the process
                 print(f)
                 if f == "Spread":
                     # Find the most recent date on the table where the field is not null
@@ -522,9 +523,16 @@ class CIXSManager(DBManager):
                     '''
                     print("zscore")
                     days = f.split('_')[1]
-                    print('days')
-                    df = pd.read_sql_table(table, con=self.SecEngine, parse_dates={'date': {'format': '%Y%m%d'}})
-                    self.CIXS_Calc_zScore(df, days)
+                    df = pd.read_sql_table(table, con=self.CIXSEngine, parse_dates={'date': {'format': '%Y%m%d'}})
+                    self.conn.commit()
+
+                    df = self.CIXS_Calc_zScore(df, days, f)
+                    df.to_sql(table, con=self.CIXSEngine, if_exists='replace', index=False)
+
+                    self.conn.commit()
+
+
+
                 else:
                     print('else')
         pass
@@ -569,7 +577,7 @@ class CIXSManager(DBManager):
         self.cur.execute(cmd)
 
 
-    def CIXS_Calc_zScore(self, df, days):
+    def CIXS_Calc_zScore(self, df, days, field):
         '''
 
         :param df:
@@ -584,7 +592,18 @@ class CIXSManager(DBManager):
         -- Filter for dates less than min date
         
         '''
-        return
+        stdDev = ('stdDev' + str(days))
+        mean = ('mean' + str(days))
+        dev = ('dev' + str(days))
+
+        df.dropna(inplace=True)
+
+        df[stdDev] = df.Spread.rolling(int(days), min_periods=int(days)).std()
+        df[mean] = df.Spread.rolling(int(days), min_periods=int(days)).mean()
+        df[dev] = df.Spread - df[mean]
+        df[field] = df[dev] / df[stdDev]
+        df.drop_duplicates(inplace=True)
+        return df
 
     def CIXS_Calc_High(self, days):
         return
@@ -855,7 +874,7 @@ def initializeAndUpdate():
     security_df = securityExcelFile.parse('Sheet2')
 
     today = dt.date.today().strftime("%Y%m%d")
-    engine = create_engine(r'sqlite:///H:\BOND_TRA\ATJ\Projects\Data\database.db')
+    engine = create_engine(r'sqlite:///H:\BOND_TRA\ATJ\Projects\Monitors\CIXS\DashRepository\database.db')
     print(today)
 
     dbm = DBManager()
